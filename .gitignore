@@ -1,0 +1,5 @@
+*.Rproj
+*.sqlite
+.DS_Store
+.Rproj.user
+packrat/lib*/
