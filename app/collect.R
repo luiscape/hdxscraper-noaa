@@ -250,10 +250,3 @@ tryCatch(runScraper(),
 )
 
 changeSwStatus(type = 'ok')
-
-
-
-
-
-
-x <- fetchCountryData('FIPS:BF', indicators, end='2015-11-01')
