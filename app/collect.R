@@ -1,6 +1,6 @@
 #
 #  NCDC COLLECTOR: --------------------------------------
-#  
+#
 #  Collector for NCDC / NOAA precipitation data.
 #  This collector will query NCDC's API for
 #  a list of indicators, for about 10 years,
@@ -56,15 +56,13 @@ fetchCountries <- function() {
   return(countries$data)
 }
 
-countries <- fetchCountries()
-
 #
 #  INDICATORS: ----------------------------------------
-# 
+#
 #  Here we are interested in collecting all indicators
 #  of interest. Those come from the "precipitation"
 #  classification. They are:
-#  
+#
 #    - TPCP: Total precipitation
 #    - MXSD: Maximum snow depth
 #    - TSNW: Total snow fall
@@ -72,7 +70,7 @@ countries <- fetchCountries()
 #
 #  ----------------------------------------------------
 #
-indicators = c('TPCP', 'MXSD', 'TSNW', 'EMXP')
+indicator_list = c('TPCP', 'MXSD', 'TSNW', 'EMXP')
 
 #
 #  LOGIC: ---------------------------------------------
@@ -87,44 +85,126 @@ indicators = c('TPCP', 'MXSD', 'TSNW', 'EMXP')
 #
 #  ----------------------------------------------------
 #
-fetchCountryData <- function(country=NULL, indicators=NULL, start='2006-01-01', end=NULL) {
+fetchCountryData <- function(
+  country=NULL,
+  country_name=NULL,
+  indicators=indicator_list,
+  start='2010-01-01',
+  end=NULL
+  ) {
+
+  #
+  #  Defining merge data.frame.
+  #
+  out <- data.frame(
+    date = NA,
+    datatype = NA,
+    station = NA,
+    value = NA,
+    fl_miss = NA,
+    fl_cmiss = NA,
+    country = NA,
+    indicator = NA
+  )
   for (i in 1:length(indicators)) {
-    it <- ncdc(
-      datasetid='GHCNDMS', 
-      locationid=country,
-      datatypeid=indicators[i], 
-      startdate = start,
-      enddate = end
-    )
-    if (i == 1) {
-      out <- it$data
-    } else {
-      out <- rbind(out, it$data)
+    o = 0
+    total = 1000
+    it <- out
+    while(nrow(it) <= total) {
+      cat('.')
+      Sys.sleep(1)
+      a <- ncdc(
+        datasetid='GHCNDMS',
+        locationid=country,
+        datatypeid=indicators[i],
+        startdate = start,
+        enddate = end,
+        limit = 1000,
+        offset = o
+      )
+
+      #
+      #  Organizing iterator.
+      #
+      if (is.null(a$meta$totalCount)) {
+        break
+      } else {
+        total = a$meta$totalCount
+        o = o + 1
+      }
+
+      if (is.null(a$data) == FALSE) {
+        #
+        #  Building data.frame.
+        #
+        a$data$indicator <- indicators[i]
+        a$data$country <- country_name
+
+        it <- rbind(it, a$data)
+      }
+
+    }
+    if (nrow(it) > 0) {
+      out <- rbind(out, it)
     }
   }
-  return(it)
+
+  #
+  #  Filters the NA introduced
+  #  by the data.frame definition.
+  #
+  return(filter(out, is.na(datatype) == FALSE))
 }
 
-fetchAllCountries <- function(country_list=NULL) {
+fetchAllCountries <- function(country_list=x) {
+
+  #
+  #  Defining merge data.frame.
+  #
+  out <- data.frame(
+    date = NA,
+    datatype = NA,
+    station = NA,
+    value = NA,
+    fl_miss = NA,
+    fl_cmiss = NA,
+    country = NA,
+    indicator = NA
+  )
+
+  #
+  #  Creates an iterator for each
+  #  country.
+  #
   for (i in 1:nrow(country_list)) {
-    cat(paste(country_list$id[i]), ':')
-    it <- fetchCountryData(country=country_list$id[i], end=country_list$maxdate[i])
-    country = substr(country_list$id[i],nchar(country_list$id[i])-1, nchar(country_list$id[i]))
-    if (!is.null(it)) {
-      if (i == 1) {
-        it$country <- country
-        out <- it$data
-      } else {
-        it$country <- country
-        out <- rbind(out, it$data)
-      } 
+    cat(paste(country_list$id[i]), ': ')
+
+    try(
+      #
+      #  Collecting all data from
+      #  a single country.
+      #
+      it <- fetchCountryData(
+        country=country_list$id[i],
+        country_name=country_list$name[i],
+        end=country_list$maxdate[i]
+      )
+    )
+    if(class(it) == "try-error") { next }
+
+    #
+    #  Save temporary results in disk.
+    #
+    cat(paste(nrow(it)), 'records.\n')
+    write.csv(out, paste0('data/', country_list$name[i], '.csv'), row.names=FALSE)
+    if (!is.null(it) && nrow(it) > 0) {
+      out <- rbind(out, it)
     } else {
       print('No data.')
       next
     }
-    cat(paste(nrow(out)), '\n')
   }
-  return (out)
+  return(out)
 }
 
 #
@@ -138,8 +218,12 @@ runScraper <- function() {
   #
   # Collect data from NOAA.
   #
-  data <- fetchAllCountries(countries)
-  
+  countries <- fetchCountries()
+  data <- fetchAllCountries(c)
+
+  write.csv(countries, 'countries.csv', row.names = FALSE)
+  write.csv(data, 'data', row.names = FALSE)
+
   #
   #  Writting tables in SQLite.
   #
@@ -166,3 +250,10 @@ tryCatch(runScraper(),
 )
 
 changeSwStatus(type = 'ok')
+
+
+
+
+
+
+x <- fetchCountryData('FIPS:BF', indicators, end='2015-11-01')
