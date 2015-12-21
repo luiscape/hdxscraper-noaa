@@ -16,6 +16,8 @@
 #  ------------------------------------------------------
 #
 library(rnoaa)
+library(dplyr)
+library(countrycode)
 
 #
 #  HELPER: ----------------------------------------------
@@ -48,8 +50,8 @@ source(onSw('app/helpers/write_table.R'))
 #
 #  ------------------------------------------------------
 #
-token = ''
-options(noaakey = token)
+TOKEN = 'exWejMnqCKSFJGqbutdfbchkoiqtuoOq'
+options(noaakey = TOKEN)
 
 fetchCountries <- function() {
   countries = ncdc_locs(locationcategoryid='CNTRY', limit=300)
@@ -148,15 +150,30 @@ fetchCountryData <- function(
       out <- rbind(out, it)
     }
   }
+  #
+  # Filters NAs
+  #
+  out <- filter(out, is.na(datatype) == FALSE)
+  
+  #
+  #  Save temporary results in disk.
+  #
+  cat(paste(nrow(out)), 'records.\n')
+  write.csv(out, paste0('data/', country_name, '.csv'), row.names=FALSE)
+  
+  table_name = countrycode(country_name, 'country.name', 'iso3c')
+  if (is.na(table_name) == FALSE && nrow(out) > 0) {
+    writeTable(out, table_name)
+  }
+  
+  #
+  #  Storing metadata to disk.
+  #
 
-  #
-  #  Filters the NA introduced
-  #  by the data.frame definition.
-  #
-  return(filter(out, is.na(datatype) == FALSE))
+  return(out)
 }
 
-fetchAllCountries <- function(country_list=x) {
+fetchAllCountries <- function(country_list=NULL) {
 
   #
   #  Defining merge data.frame.
@@ -192,11 +209,6 @@ fetchAllCountries <- function(country_list=x) {
     )
     if(class(it) == "try-error") { next }
 
-    #
-    #  Save temporary results in disk.
-    #
-    cat(paste(nrow(it)), 'records.\n')
-    write.csv(out, paste0('data/', country_list$name[i], '.csv'), row.names=FALSE)
     if (!is.null(it) && nrow(it) > 0) {
       out <- rbind(out, it)
     } else {
@@ -204,7 +216,6 @@ fetchAllCountries <- function(country_list=x) {
       next
     }
   }
-  return(out)
 }
 
 #
@@ -219,16 +230,28 @@ runScraper <- function() {
   # Collect data from NOAA.
   #
   countries <- fetchCountries()
-  data <- fetchAllCountries(c)
-
-  write.csv(countries, 'countries.csv', row.names = FALSE)
-  write.csv(data, 'data', row.names = FALSE)
+  fetchAllCountries(countries)
 
   #
   #  Writting tables in SQLite.
   #
   writeTable(countries, 'country_summaries')
-  writeTable(data, 'precipitation_data')
+  
+#   #
+#   # Creating and writting JSON metadata
+#   # on disk.
+#   #
+#   datasets_json <- createDatasetsJson(subset_of_interest)
+#   gallery_json <- createGalleryJson(subset_of_interest)
+#   resources_json <- createResourcesJson(subset_of_interest)
+#   
+#   jsons <- list(datasets_json, resources_json, gallery_json)
+#   for (i in 1:length(jsons)) {
+#     p = c("data/datasets.json", "data/resources.json", "data/gallery.json")
+#     sink(onSw(p[i]))
+#     cat(toJSON(jsons[i]))
+#     sink()
+#   }
 }
 
 
