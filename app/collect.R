@@ -51,7 +51,7 @@ source(onSw('app/helpers/write_table.R'))
 #
 #  ------------------------------------------------------
 #
-TOKEN = ''
+TOKEN = 'exWejMnqCKSFJGqbutdfbchkoiqtuoOq'
 options(noaakey = TOKEN)
 
 fetchCountries <- function() {

@@ -11,56 +11,91 @@
 #  ------------------------------------------------------
 #
 
-library(counrycode)
+library(countrycode)
 
 #
 # Add default missing metadata to
 # each dataset.
 #
-addBaseMetadata <- function(df=NULL, is_private=TRUE) {
+addBaseMetadata <- function(country_list=NULL, is_private=TRUE) {
   cat('Adding metadata ...')
   
+
+  #
+  # Dataset name and title.
+  #
+  for (i in 1:nrow(country_list)) {
+    country_name = countrycode(toupper(as.character(country_list$name[i])), 'iso3c','country.name')
+    
+    country_list$title[i] = paste('Daily Summaries of Precipitation Indicators for', country_name)
+    country_list$notes[i] = paste0("This dataset contains the daily summaries on base stations across **", country_name, "**. The four indicators included are:   <br />\n <br />\n* **TPCP**: Total precipitation <br />\n* **MXSD**: Maximum snow depth <br />\n* **TSNW**: Total snow fall <br />\n* **EMXP**: Extreme maximum daily precipitation <br />\n <br />\nIndicators are compiled by the  National Centers for Environmental Information (NCEI), which is administrated by National Oceanic and Atmospheric Administration (NOAA) an organization part of the United States government. NOAA has access to data collected from thousands of base stations around the world, which collect data periodically on weather and climate conditions. <br />\n <br />\nThis dataset contains the latest **5 years of available data**.")
+    
+    #
+    # Cleaning country name.
+    #
+    country_name <- tolower(country_name)
+    country_name <- gsub("'", "", country_name)
+    country_name <- gsub(" ", "-", country_name)
+    country_name <- gsub(",", "-", country_name)
+    country_name <- gsub("\\(", "-", country_name)
+    country_name <- gsub("\\)", "-", country_name)
+    
+    country_list$dataset_name[i] = paste0('daily-summaries-of-precipitation-indicators-for-', country_name)
+    
+    #
+    # Adding resource metadata.
+    #
+    country_list$url[i] <- paste0('https://ds-ec2.scraperwiki.com/fhsehwp/vdocua8hjwptucu/cgi-bin/csv/', country_list$name[i], '.csv')
+    country_list$file_name[i] <- paste0('precipitation_', country_list$name[i], '.csv')
+    
+  }
+  
+  #
+  # Adding country.
+  #
+  country_list$group = country_list$name
+  
+  #
+  # Dataset date.
+  #
+  country_list$dataset_date = country_list$latest_date
+
   #
   # License
   #
-  df$license_id = "other-pd-nr"
-  df$license_title = "other-pd-nr"
-  df$license_other = ""
+  country_list$license_id = "other-pd-nr"
+  country_list$license_title = "other-pd-nr"
+  country_list$license_other = ""
   
   #
   # Author and maintainer.
   #
-  df$author = "ncdc"
-  df$author_email = "ncdc.orders@noaa.gov"
-  df$maintainer = "luiscape"
-  df$maintainer_email = "capelo@un.org"
-  df$dataset_source = "National Oceanic and Atmospheric Administration (NOAA)"
-  df$owner_org = "hdx"
+  country_list$author = "noaa"
+  country_list$author_email = "ncdc.orders@noaa.gov"
+  country_list$maintainer = "luiscape"
+  country_list$maintainer_email = "capelo@un.org"
+  country_list$dataset_source = "National Centers for Environmental Information (NCEI / NOAA)"
+  country_list$owner_org = "hdx"
   
   #
   # Organization id that created dataset.
   #
-  df$package_creator = "luiscape"
+  country_list$package_creator = "luiscape"
   
   #
   # Private attribute.
   #
-  df$private = is_private
+  country_list$private = is_private
   
   #
   # Methodology and caveats.
   #
-  df$methodology = "Other"
-  df$methodology_other = 'For a station to be considered for any parameter, it must have a minimum of 30 years of data with more than 182 days complete each year. This is effectively a "30-year record of service" requirement, but allows for inclusion of some stations which routinely shut down during certain seasons. Small station moves, such as a move from one property to an adjacent property, may occur within a station history. However, larger moves, such as a station moving from downtown to the city airport, generally result in the commissioning of a new station identifier. This tool treats each of these histories as a different station. In this way, it does not "thread" the separate histories into one record for a city. For more information, please refer to NOAA NCDC\'s official [methodology page](https://www.ncdc.noaa.gov/cdo-web/datatools/records).'
-  df$caveats = "Due to late-arriving data, the number of recent records is likely underrepresented in all categories, but the ratio of records (warm to cold, for example) should be a fairly strong estimate of a final outcome."
-  
-  #
-  # Tags.
-  #
-  df$list_of_tags = c('climate change', 'precipitation', 'weather', 'climate', 'el nino')
+  country_list$methodology = "Other"
+  country_list$methodology_other = 'For a station to be considered for any parameter, it must have a minimum of 30 years of data with more than 182 days complete each year. This is effectively a "30-year record of service" requirement, but allows for inclusion of some stations which routinely shut down during certain seasons. Small station moves, such as a move from one property to an adjacent property, may occur within a station history. However, larger moves, such as a station moving from downtown to the city airport, generally result in the commissioning of a new station identifier. This tool treats each of these histories as a different station. In this way, it does not "thread" the separate histories into one record for a city. For more information, please refer to NOAA NCDC\'s official [methodology page](https://www.ncdc.noaa.gov/cdo-web/datatools/records).'
+  country_list$caveats = "Due to late-arriving data, the number of recent records is likely underrepresented in all categories, but the ratio of records (warm to cold, for example) should be a fairly strong estimate of a final outcome."
   
   cat('done.\n')
-  return(df)
+  return(country_list)
 }
 
 
@@ -100,12 +135,16 @@ createDatasetsJson <- function(df = NULL) {
            private = TRUE,  # Public to the world?
            url = NULL,
            state = "active",  # Better don't touch this.
-           tags = list(list_of_tags),
+           tags = list(
+             list(name = 'climate change'),
+             list(name = 'precipitation'),
+             list(name = 'weather'),
+             list(name = 'climate'), 
+             list(name = 'el nino')
+             ),
            groups = list(
-             list(
-               id = group_id[i]
-             )
-           ),
+             list(id = group[i])
+             ),
            owner_org = owner_org[i]
          )
     )
@@ -130,28 +169,16 @@ createResourcesJson <- function(df = NULL) {
   
   for (i in 1:nrow(df)) {
     with(df,
-         resource_1 <<-
+         resource <<-
            list(
              package_id = dataset_name[i],
-             url = url_1[i],
-             name = file_name_1[i],
-             format = 'CSV'
-           )
-    )
-    with(df,
-         resource_2 <<-
-           list(
-             package_id = dataset_name[i],
-             url = url_2[i],
-             name = file_name_2[i],
+             url = url[i],
+             name = file_name[i],
              format = 'CSV'
            )
     )
     
-    it <- c(
-      list(resource_1),
-      list(resource_2)
-    )
+    it <- list(resource)
     
     #
     # Filter resources without URL

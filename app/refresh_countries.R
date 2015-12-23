@@ -20,7 +20,7 @@ library(countrycode)
 #
 #  ------------------------------------------------------
 #
-TOKEN = ''
+TOKEN = 'exWejMnqCKSFJGqbutdfbchkoiqtuoOq'
 options(noaakey = TOKEN)
 
 fetchCountries <- function() {
@@ -45,4 +45,8 @@ refreshCountries <- function(table_name = 'countries') {
   #
   db <- dbConnect(SQLite(), dbname = 'scraperwiki.sqlite')
   dbWriteTable(db, table_name, countries, row.names = FALSE, overwrite = TRUE)
+  
+  cat('Weekly country-list refreshed successfully!\n')
 }
+
+refreshCountries()

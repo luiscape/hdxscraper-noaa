@@ -11,12 +11,15 @@
 #
 #  -------------------------------------------
 #
+library(dplyr)
+library(RJSONIO)
 
 onSw <- function(p = NULL, d = 'tool/', a = F) {
   if (a == T) return(paste0(d,p))
   else return(p)
 }
 
+source(onSw('app/metadata.R'))
 source(onSw('app/hdx_country_list.R'))
 
 #
@@ -29,6 +32,17 @@ source(onSw('app/hdx_country_list.R'))
 #  --------------------------------------------------
 #
 DB_NAME <- 'scraperwiki.sqlite'
+
+fetchLatestDate <- function(country_list=NULL) {
+  db <- dbConnect(SQLite(), dbname = DB_NAME)
+  
+  country_list$latest_date <- NA
+  for (i in 1:nrow(country_list)) {
+    country_list$latest_date[i] <- dbGetQuery(db, paste0('SELECT MAX(date) FROM ', country_list$name[i])) 
+  }
+  
+  return(country_list)
+}
 
 generateMetadata <- function() {
   cat('Generating metadata files ... ')
@@ -44,6 +58,7 @@ generateMetadata <- function() {
     exists = NA
     )
   
+  
   #
   #  Collect list of countries and compare.
   #  The result of comparison should generate
@@ -54,11 +69,21 @@ generateMetadata <- function() {
   hdx_ready_list <- filter(table_list, exists == TRUE)
   
   #
+  # Fetches the latest date
+  # for each available country,
+  # and cleans those that have
+  # no data.
+  #
+  y <- fetchLatestDate(hdx_ready_list)
+  cleaned_country_list <- filter(y, is.na(latest_date) == FALSE)
+  
+  #
   # Creating and writting JSON metadata
   # on disk.
   #
-  datasets_json <- createDatasetsJson(hdx_ready_list)
-  resources_json <- createResourcesJson(hdx_ready_list)
+  countries_metadata <- addBaseMetadata(cleaned_country_list)
+  datasets_json <- createDatasetsJson(countries_metadata)
+  resources_json <- createResourcesJson(countries_metadata)
   
   jsons <- list(datasets_json, resources_json)
   for (i in 1:length(jsons)) {
