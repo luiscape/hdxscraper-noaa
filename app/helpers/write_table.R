@@ -21,7 +21,7 @@ writeTable <- function(df = NULL,
     dbWriteTable(db,
                  table_name,
                  df,
-                 row.names = FALSE,
+               row.names = FALSE,
                  overwrite = TRUE)
   }
   else {

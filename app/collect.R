@@ -39,6 +39,7 @@ onSw <- function(p = NULL, d = 'tool/', a = F) {
   else return(p)
 }
 
+source(onSw('app/country_state.R'))
 source(onSw('app/helpers/sw_status.R'))
 source(onSw('app/helpers/write_table.R'))
 
@@ -50,7 +51,7 @@ source(onSw('app/helpers/write_table.R'))
 #
 #  ------------------------------------------------------
 #
-TOKEN = 'exWejMnqCKSFJGqbutdfbchkoiqtuoOq'
+TOKEN = ''
 options(noaakey = TOKEN)
 
 fetchCountries <- function() {
@@ -108,68 +109,72 @@ fetchCountryData <- function(
     country = NA,
     indicator = NA
   )
-  for (i in 1:length(indicators)) {
-    o = 0
-    total = 1000
-    it <- out
-    while(nrow(it) <= total) {
-      cat('.')
-      Sys.sleep(1)
-      a <- ncdc(
-        datasetid='GHCNDMS',
-        locationid=country,
-        datatypeid=indicators[i],
-        startdate = start,
-        enddate = end,
-        limit = 1000,
-        offset = o
-      )
-
-      #
-      #  Organizing iterator.
-      #
-      if (is.null(a$meta$totalCount)) {
-        break
-      } else {
-        total = a$meta$totalCount
-        o = o + 1
-      }
-
-      if (is.null(a$data) == FALSE) {
-        #
-        #  Building data.frame.
-        #
-        a$data$indicator <- indicators[i]
-        a$data$country <- country_name
-
-        it <- rbind(it, a$data)
-      }
-
-    }
-    if (nrow(it) > 0) {
-      out <- rbind(out, it)
-    }
-  }
-  #
-  # Filters NAs
-  #
-  out <- filter(out, is.na(datatype) == FALSE)
-  
-  #
-  #  Save temporary results in disk.
-  #
-  cat(paste(nrow(out)), 'records.\n')
-  write.csv(out, paste0('data/', country_name, '.csv'), row.names=FALSE)
   
   table_name = countrycode(country_name, 'country.name', 'iso3c')
-  if (is.na(table_name) == FALSE && nrow(out) > 0) {
-    writeTable(out, table_name)
+  if (countryGet(tolower(table_name)) == FALSE) {
+    for (i in 1:length(indicators)) {
+      o = 0
+      total = 1000
+      it <- out
+      while(nrow(it) <= total) {
+        cat('.')
+        Sys.sleep(1)
+        a <- ncdc(
+          datasetid='GHCNDMS',
+          locationid=country,
+          datatypeid=indicators[i],
+          startdate = start,
+          enddate = end,
+          limit = 1000,
+          offset = o
+        )
+  
+        #
+        #  Organizing iterator.
+        #
+        if (is.null(a$meta$totalCount)) {
+          break
+        } else {
+          total = a$meta$totalCount
+          o = o + 1
+        }
+  
+        if (is.null(a$data) == FALSE) {
+          #
+          #  Building data.frame.
+          #
+          a$data$indicator <- indicators[i]
+          a$data$country <- country_name
+  
+          it <- rbind(it, a$data)
+        }
+  
+      }
+      if (nrow(it) > 0) {
+        out <- rbind(out, it)
+      }
+    }
+    #
+    # Filters NAs
+    #
+    out <- filter(out, is.na(datatype) == FALSE)
+    
+    #
+    #  Save temporary results in disk.
+    #
+    cat(paste(nrow(out)), 'records.\n')
+    write.csv(out, paste0('data/', country_name, '.csv'), row.names=FALSE)
+  
+    writeTable(out, tolower(table_name)) 
+    countrySet(tolower(table_name))
+    
+    } else {
+      cat('Weekly data already collected for', table_name, '\n')
   }
   
   #
   #  Storing metadata to disk.
   #
-
   return(out)
 }
 
@@ -237,21 +242,6 @@ runScraper <- function() {
   #
   writeTable(countries, 'country_summaries')
   
-#   #
-#   # Creating and writting JSON metadata
-#   # on disk.
-#   #
-#   datasets_json <- createDatasetsJson(subset_of_interest)
-#   gallery_json <- createGalleryJson(subset_of_interest)
-#   resources_json <- createResourcesJson(subset_of_interest)
-#   
-#   jsons <- list(datasets_json, resources_json, gallery_json)
-#   for (i in 1:length(jsons)) {
-#     p = c("data/datasets.json", "data/resources.json", "data/gallery.json")
-#     sink(onSw(p[i]))
-#     cat(toJSON(jsons[i]))
-#     sink()
-#   }
 }
 
 
