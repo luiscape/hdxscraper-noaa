@@ -1,8 +1,14 @@
 setup:
 	bash bin/setup.sh;
 
+setupsw:
+	bash bin/setup_sw.sh;
+
 run:
 	bash bin/run.sh;
 
-test:
-	bash bin/test.sh;
+runsw:
+	bash bin/run.sh;
+
+register:
+	bash bin/register.sh;

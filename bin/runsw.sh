@@ -3,10 +3,11 @@
 #
 # Running the scraper.
 #
-Rscript app/collector.R
+~/R/bin/Rscript tool/scripts/R/scraper.R
 
 #
 # Registering the datasets on HDX.
 #
+cd ~
 source venv/bin/activate
-python app/hdx_register/
+python tool/scripts/hdx_register/
