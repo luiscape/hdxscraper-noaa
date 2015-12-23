@@ -17,7 +17,7 @@ library(countrycode)
 # Add default missing metadata to
 # each dataset.
 #
-addBaseMetadata <- function(country_list=NULL, is_private=TRUE) {
+addBaseMetadata <- function(country_list=NULL, is_private=FALSE) {
   cat('Adding metadata ...')
   
 
@@ -124,7 +124,8 @@ createDatasetsJson <- function(df = NULL) {
            maintainer_email = maintainer_email[i],
            license_id = license_id[i],
            license_other = license_other[i],
-           dataset_date = format(as.Date(dataset_date[i]), "%m/%d/%Y"),  # HDX doesn't use ISO here.
+           # dataset_date = format(as.Date(dataset_date[i]), "%m/%d/%Y"),  # HDX doesn't use ISO here.
+           dataset_date = '12/23/2015',
            subnational = "1",
            notes = notes[i],
            caveats = caveats[i],
